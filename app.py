@@ -8,6 +8,9 @@ import babel
 from flask import Flask, render_template, request, Response, flash, redirect, url_for
 from flask_moment import Moment
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import func
+from sqlalchemy.orm import Query
+
 import logging
 from logging import Formatter, FileHandler
 from flask_wtf import Form
@@ -16,8 +19,7 @@ from flask_migrate import Migrate
 
 # ----------------------------------------------------------------------------#
 # App Config.
-# ----------------------------------------------------------------------------#
-
+# ---------------------------------------------------------------------------
 app = Flask(__name__)
 moment = Moment(app)
 app.config.from_object('config')
@@ -29,10 +31,10 @@ migrate = Migrate(app, db)
 # ----------------------------------------------------------------------------#
 # Models.
 # ----------------------------------------------------------------------------#
-Show = db.Table('show',
+"""Show = db.Table('show',
                 db.Column('artist_id', db.Integer, db.ForeignKey('artists.id'), primary_key=True),
                 db.Column('venue_id', db.Integer, db.ForeignKey('venues.id'), primary_key=True)
-                )
+                )"""
 
 
 class Venue(db.Model):
@@ -46,8 +48,21 @@ class Venue(db.Model):
     phone = db.Column(db.String(120))
     image_link = db.Column(db.String(500))
     facebook_link = db.Column(db.String(120))
-    artists = db.relationship('Artist', secondary=Show, backref=db.backref('artists', lazy=False))
+    shows = db.relationship('Show', backref="venue", lazy=False)
+
     # TODO: implement any missing fields, as a database migration using Flask-Migrate
+    def dictforvenues(self):
+        c = len(Venue.query.get(self.id).artists)
+        return {"id": self.id,
+                "name": self.name,
+                "num_upcoming_shows": c
+                }
+
+    def __repr__(self):
+        return f"<Venue {self.id}, {self.name}, {self.city}, {self.state}>\n"
+
+    def __str__(self):
+        return f"<Venue {self.id}, {self.name}, {self.city}>"
 
 
 class Artist(db.Model):
@@ -61,8 +76,26 @@ class Artist(db.Model):
     genres = db.Column(db.String(120))
     image_link = db.Column(db.String(500))
     facebook_link = db.Column(db.String(120))
+    shows = db.relationship("Show", backref="artist", lazy=False)
+
+    def dictforartists(self):
+        return {
+            "id": self.id,
+            "name": self.name
+        }
+
+    def __repr__(self):
+        return f"<Artist {self.id}, {self.name}>"
 
     # TODO: implement any missing fields, as a database migration using Flask-Migrate
+
+
+class Show(db.Model):
+    __tablename__ = "shows"
+    artist_id = db.Column(db.Integer, db.ForeignKey(
+        'artists.id'), primary_key=True)
+    venue_id = db.Column(db.Integer, db.ForeignKey('venues.id'), primary_key=True)
+    start_time = db.Column(db.DateTime, nullable=True)
 
 
 # TODO Implement Show and Artist models, and complete all model relationships and properties, as a database migration.
@@ -99,27 +132,21 @@ def index():
 def venues():
     # TODO: replace with real venues data.
     #       num_upcoming_shows should be aggregated based on number of upcoming shows per venue.
-    data = [{
-        "city": "San Francisco",
-        "state": "CA",
-        "venues": [{
-            "id": 1,
-            "name": "The Musical Hop",
-            "num_upcoming_shows": 0,
-        }, {
-            "id": 3,
-            "name": "Park Square Live Music & Coffee",
-            "num_upcoming_shows": 1,
-        }]
-    }, {
-        "city": "New York",
-        "state": "NY",
-        "venues": [{
-            "id": 2,
-            "name": "The Dueling Pianos Bar",
-            "num_upcoming_shows": 0,
-        }]
-    }]
+    areas = Venue.query.with_entities(func.count(Venue.id),
+                                      Venue.city,
+                                      Venue.state
+                                      ).group_by(Venue.city, Venue.state).all()
+    data = []
+    for area in areas:
+        area_venues = Venue.query.filter_by(state=area.state).filter_by(city=area.city).all()
+        venue_data = []
+        for venue in area_venues:
+            venue_data.append(venue.dictforvenues())
+        data.append({
+            "city": area.city,
+            "state": area.state,
+            "venues": venue_data
+        })
     return render_template('pages/venues.html', areas=data);
 
 
@@ -262,16 +289,10 @@ def delete_venue(venue_id):
 @app.route('/artists')
 def artists():
     # TODO: replace with real data returned from querying the database
-    data = [{
-        "id": 4,
-        "name": "Guns N Petals",
-    }, {
-        "id": 5,
-        "name": "Matt Quevedo",
-    }, {
-        "id": 6,
-        "name": "The Wild Sax Band",
-    }]
+    arts = Artist.query.all()
+    data = []
+    for artist in arts:
+        data.append(artist.dictforartists())
     return render_template('pages/artists.html', artists=data)
 
 
