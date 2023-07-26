@@ -37,6 +37,7 @@ class VenueForm(Form):
             ('CT', 'CT'),
             ('DE', 'DE'),
             ('DC', 'DC'),
+            ('EG', 'EG'),
             ('FL', 'FL'),
             ('GA', 'GA'),
             ('HI', 'HI'),
