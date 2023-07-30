@@ -29,9 +29,9 @@ app.config.from_object('config')
 
 
 
-# ----------------------------------------------------------------------------#
-# Models.
-# ----------------------------------------------------------------------------#
+
+
+
 
 
 
@@ -50,7 +50,7 @@ def format_datetime(value, format='medium'):
         format = "EE MM, dd, y h:mma"
     return babel.dates.format_datetime(date, format, locale='en')
 
-from models import Venue, Artist, Show, Artist_Genres, Venue_Genres
+from models import Venue, Artist, Show, Artist_Genres, Venue_Genres, db
 
 app.jinja_env.filters['datetime'] = format_datetime
 

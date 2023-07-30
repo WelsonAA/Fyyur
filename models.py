@@ -5,6 +5,10 @@ from app import format_datetime,app
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 
+# ----------------------------------------------------------------------------#
+# Models.
+# ----------------------------------------------------------------------------#
+
 class Venue(db.Model):
     __tablename__ = 'venues'
 
